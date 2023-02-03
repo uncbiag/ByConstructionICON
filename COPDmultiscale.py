@@ -1,12 +1,12 @@
+import footsteps
+
+footsteps.initialize(output_root="evaluation_results/")
 import argparse
 import os
 import random
 import unittest
 
 import footsteps
-import matplotlib.pyplot as plt
-import numpy as np
-
 import icon_registration as icon
 import icon_registration.data
 import icon_registration.itk_wrapper
@@ -15,12 +15,13 @@ import icon_registration.pretrained_models
 import icon_registration.pretrained_models.lung_ct
 import icon_registration.test_utils
 import itk
+import matplotlib.pyplot as plt
+import numpy as np
 import torch
 import torch.nn.functional as F
 import torchvision.utils
 from icon_registration.config import device
 
-footsteps.initialize(output_root="evaluation_results/")
 import utils
 
 
@@ -129,7 +130,10 @@ inner_net3 = ICONSquaringVelocityField(networks.tallUNet2(dimension=3))
 threestep_consistent_net = icon.losses.BendingEnergyNet(
     UnwrapHalfwaynet(
         TwoStepInverseConsistent(
-            inner_net, TwoStepInverseConsistent(inner_net2, inner_net3)
+            icon.DownsampleRegistration(icon.DownsampleRegistration(inner_net, 3), 3),
+            TwoStepInverseConsistent(
+                icon.DownsampleRegistration(inner_net2, 3), inner_net3
+            ),
         )
     ),
     icon.LNCC(sigma=5),
@@ -186,7 +190,7 @@ for case in cases:
         net,
         image_insp_preprocessed,
         image_exp_preprocessed,
-        finetune_steps=(5 if args.finetune==True else None),
+        finetune_steps=(50 if args.finetune == True else None),
         return_artifacts=True,
     )
     dists = []

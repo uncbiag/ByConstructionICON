@@ -1,4 +1,3 @@
-
 import random
 import os
 import torch
@@ -70,32 +69,17 @@ class TwoStepInverseConsistent(icon.RegistrationModule):
 
     psi_AB, psi_BA = self.netPsi(A_tilde, B_tilde)
 
-    # A_tilde \circ root_psi_AB ~ B_tilde \circ root_psi_BA
 
-    # expand A_tilde
-
-    # image_A \circ root_phi_AB \circ root_psi_AB ~ image_B \circ root_phi_BA \circ root_psi_BA
-
-    # right compose with root_psi_AB
-
-    # image_A \circ root_phi_AB \circ root_psi_AB \circ root_psi_AB ~ image_B \circ root_phi_BA \circ root_psi_BA \circ root_psi_AB
-
-    # \circ root_psi_AB cancels \circ root_psi_BA on the right side
-
-    # image_A \circ root_phi_AB \circ root_psi_AB \circ root_psi_AB ~ image_B \circ root_phi_BA
-
-    # right compose with root_psi_AB, cancels on the right side again
-
-    # image_A \circ root_phi_AB \circ root_psi_AB \circ root_psi_AB \circ root_phi_AB ~ image_B 
-
-    #               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-    #               here is our final AB transform
-
-
-    return (
-        lambda coord: root_phi_AB(psi_AB(root_phi_AB(coord))),
-        lambda coord: root_phi_BA(psi_BA(root_phi_BA(coord)))
-    )
+    if random.random() > .3:
+        return (
+            lambda coord: root_phi_AB(psi_AB(root_phi_AB(coord))),
+            lambda coord: root_phi_BA(psi_BA(root_phi_BA(coord)))
+        )
+    else:
+        return (
+            lambda coord: root_phi_AB(root_phi_AB(coord)),
+            lambda coord: root_phi_BA(root_phi_BA(coord))
+        )
 
 class UnwrapHalfwaynet(icon.RegistrationModule):
   def __init__(self, net):
@@ -124,11 +108,11 @@ threestep_consistent_net.assign_identity_map(input_shape)
 
 
 net_par = torch.nn.DataParallel(threestep_consistent_net).cuda()
-optimizer = torch.optim.Adam(net_par.parameters(), lr=0.00001)
+optimizer = torch.optim.Adam(net_par.parameters(), lr=0.00005)
 
 net_par.train()
 
-BATCH_SIZE=4
+BATCH_SIZE=3
 GPUS =3
 WITH_AUGMENT = True
 

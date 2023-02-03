@@ -108,7 +108,7 @@ class UnwrapHalfwaynet(icon.RegistrationModule):
 
 input_shape = [1, 1, 175, 175, 175]
 
-lmbda = 0.001
+lmbda = 0.01
 
 inner_net = ICONSquaringVelocityField(networks.tallUNet2(dimension=3))
 inner_net2 = ICONSquaringVelocityField(networks.tallUNet2(dimension=3))
@@ -116,19 +116,19 @@ inner_net3 = ICONSquaringVelocityField(networks.tallUNet2(dimension=3))
 
 threestep_consistent_net = icon.losses.BendingEnergyNet(
     UnwrapHalfwaynet(
-        TwoStepInverseConsistent(inner_net, 
-             TwoStepInverseConsistent(inner_net2, inner_net3))
+        TwoStepInverseConsistent(icon.DownsampleRegistration(icon.DownsampleRegistration(inner_net, 3), 3), 
+             TwoStepInverseConsistent(icon.DownsampleRegistration(inner_net2, 3), inner_net3))
     )
     , icon.LNCC(sigma=5), lmbda=lmbda)
 threestep_consistent_net.assign_identity_map(input_shape)
 
 
 net_par = torch.nn.DataParallel(threestep_consistent_net).cuda()
-optimizer = torch.optim.Adam(net_par.parameters(), lr=0.00001)
+optimizer = torch.optim.Adam(net_par.parameters(), lr=0.00005)
 
 net_par.train()
 
-BATCH_SIZE=4
+BATCH_SIZE=5
 GPUS =3
 WITH_AUGMENT = True
 

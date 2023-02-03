@@ -85,7 +85,7 @@ class UnwrapHalfwaynet(icon.RegistrationModule):
 
 input_shape = [1, 1, 130, 155, 130]
 
-lmbda = 0.001
+lmbda = 0.0001
 
 inner_net = ICONSquaringVelocityField(networks.tallUNet2(dimension=3))
 inner_net2 = ICONSquaringVelocityField(networks.tallUNet2(dimension=3))

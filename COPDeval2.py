@@ -25,15 +25,18 @@ import utils
 
 
 class ICONSquaringVelocityField(icon.RegistrationModule):
-    def __init__(self, net):
+    def __init__(self, net, power=1):
         super().__init__()
         self.net = net
         self.n_steps = 7
+        self.power = power
 
     def forward(self, image_A, image_B):
         velocityfield_delta_a = (
-            self.net(image_A, image_B) - self.net(image_B, image_A)
-        ) / 2**self.n_steps
+            (self.net(image_A, image_B) - self.net(image_B, image_A))
+            / 2**self.n_steps
+            * self.power
+        )
         velocityfield_delta = velocityfield_delta_a
 
         for _ in range(self.n_steps):
@@ -120,16 +123,20 @@ class UnwrapHalfwaynet(icon.RegistrationModule):
 
 input_shape = [1, 1, 175, 175, 175]
 
-lmbda = 0.001
+lmbda = 0#0.001
 
 inner_net = ICONSquaringVelocityField(networks.tallUNet2(dimension=3))
 inner_net2 = ICONSquaringVelocityField(networks.tallUNet2(dimension=3))
-inner_net3 = ICONSquaringVelocityField(networks.tallUNet2(dimension=3))
+inner_net3 = ICONSquaringVelocityField(networks.tallUNet2(dimension=3), power=0.5)
+inner_net4 = ICONSquaringVelocityField(networks.tallUNet2(dimension=3))
 
 threestep_consistent_net = icon.losses.BendingEnergyNet(
     UnwrapHalfwaynet(
         TwoStepInverseConsistent(
-            inner_net, TwoStepInverseConsistent(inner_net2, inner_net3)
+            inner_net,
+            TwoStepInverseConsistent(
+                inner_net2, TwoStepInverseConsistent(inner_net3, inner_net4)
+            ),
         )
     ),
     icon.LNCC(sigma=5),
@@ -186,7 +193,7 @@ for case in cases:
         net,
         image_insp_preprocessed,
         image_exp_preprocessed,
-        finetune_steps=(5 if args.finetune==True else None),
+        finetune_steps=(5 if args.finetune == True else None),
         return_artifacts=True,
     )
     dists = []
