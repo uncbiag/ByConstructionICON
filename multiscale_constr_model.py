@@ -147,7 +147,9 @@ class ExponentialMatrix(icon.RegistrationModule):
         self.net = net
 
     def forward(self, image_A, image_B):
-        matrix_phi = self.net(image_A, image_B)# - self.net(image_B, image_A)
+        matrix_phi = self.net(image_A, image_B) - torch.tensor(
+            [[1, 0, 0], [0, 1, 0], [0, 0, 1]]
+        ).to(image_A.device)
 
         matrix_phi_BA = torch.linalg.matrix_exp(-matrix_phi)
         matrix_phi = torch.linalg.matrix_exp(matrix_phi)
@@ -181,6 +183,8 @@ class ExponentialMatrix(icon.RegistrationModule):
             )[:, :-1]
 
         return transform, transform1
+
+
 class TwoStepInverseConsistent(icon.RegistrationModule):
     def __init__(self, phi, psi):
         super().__init__()
@@ -310,7 +314,9 @@ def pretrained_affine_deformable_model(input_shape, lmbda):
     return threestep_consistent_net
 
 
-def evaluate(net, prefix, epochs, lr=0.001, ds1=None, ds2=None, show=False, fileext = ".png"):
+def evaluate(
+    net, prefix, epochs, lr=0.001, ds1=None, ds2=None, doshow=False, fileext=".png"
+):
     import footsteps
 
     if ds2 is None:
@@ -328,7 +334,7 @@ def evaluate(net, prefix, epochs, lr=0.001, ds1=None, ds2=None, show=False, file
             name = "bending_energy_loss"
         plt.title(name)
     plt.tight_layout()
-    if show:
+    if doshow:
         plt.show()
     else:
         plt.savefig(footsteps.output_dir + prefix + "curves" + fileext)
@@ -370,7 +376,7 @@ def evaluate(net, prefix, epochs, lr=0.001, ds1=None, ds2=None, show=False, file
     plt.title("Difference Images")
     show(net.warped_image_A - image_B)
     plt.tight_layout()
-    if show:
+    if doshow:
         plt.show()
     else:
         plt.savefig(footsteps.output_dir + prefix + "images" + fileext)
@@ -390,25 +396,21 @@ def evaluate(net, prefix, epochs, lr=0.001, ds1=None, ds2=None, show=False, file
         .detach(),
         levels=np.linspace(0, 1, 35),
     )
-    if show:
+    if doshow:
         plt.show()
     else:
         plt.savefig(footsteps.output_dir + prefix + "deformations" + fileext)
         plt.clf()
     plt.title("Composition of A->B and B->A transforms")
     plt.contour(
-        (net.phi_AB(net.phi_BA(net.identity_map)))[0, 0]
-        .cpu()
-        .detach(),
+        (net.phi_AB(net.phi_BA(net.identity_map)))[0, 0].cpu().detach(),
         levels=35,
     )
     plt.contour(
-        (net.phi_AB(net.phi_BA(net.identity_map)))[0, 1]
-        .cpu()
-        .detach(),
+        (net.phi_AB(net.phi_BA(net.identity_map)))[0, 1].cpu().detach(),
         levels=35,
     )
-    if show:
+    if doshow:
         plt.show()
     else:
         plt.savefig(footsteps.output_dir + prefix + "composition" + fileext)

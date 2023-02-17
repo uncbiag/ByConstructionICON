@@ -56,11 +56,9 @@ def two_step(step):
     s1 = step()
     s2 = step()
 
-    return FlipReturn(
-        icon.TwoStepRegistration(
-            multiscale_constr_model.FirstTransform(s1),
-            multiscale_constr_model.FirstTransform(s2),
-        )
+    return icon.TwoStepRegistration(
+        multiscale_constr_model.FirstTransform(s1),
+        multiscale_constr_model.FirstTransform(s2),
     )
 
 
@@ -84,34 +82,27 @@ def do_experiment():
             print(experiment_name)
             network = step_strategy(inner_net)
 
-            loss = icon.losses.BendingEnergyNet(network, icon.LNCC(5), lmbda=0)
+            loss = icon.losses.InverseConsistentNet(network, icon.LNCC(5), lmbda=0)
             loss.assign_identity_map((1, 1, 30, 30))
 
             curves[experiment_name] = multiscale_constr_model.evaluate(
-                loss, experiment_name + "/", 10, ds1=ds1
+                loss, experiment_name, 30, ds1=ds1
             )
 
-    yeet = (
-        "matrix_curves",
-        "two_matrix_curves",
-        "matrix_consistent_curves",
-        "two_matrix_consistent",
-        "three_matrix_consistent",
-    )
-
-    for i, name in enumerate(locals()[yeet[0]][0]._fields):
+    experiments = list(curves.keys())
+    plt.clf()
+    for i, metric_name in enumerate(curves[experiments[0]][0]._fields):
 
         plt.subplot(2, 3, i + 1)
-        for y in yeet:
-            plt.plot([getattr(c, name) for c in locals()[y]])
+        for experiment_name in experiments:
+            plt.plot([getattr(val,metric_name) for val in curves[experiment_name]])
 
-        if name == "inverse_consistency_loss":
-            name = "bending_energy_loss"
-        plt.title(name)
+        plt.title(metric_name)
     plt.subplot(2, 3, 6)
-    plt.plot([[0 for y in yeet]])
-    plt.legend(yeet)
-    plt.savefig("oonf.pdf")
+    plt.plot([[0 for y in experiment_name]])
+    plt.legend(experiments)
+    plt.savefig(footsteps.output_dir + "curve_summary.pdf")
+    torch.save(curves, footsteps.output_dir + "curves.trch")
 
 
 do_experiment()
