@@ -15,6 +15,16 @@ from icon_registration.config import device
 
 
 def find_velocity_fields(phi):
+    """
+    phi is a function representing a transform, but if it's the integral of a velocity field
+    it has that velocity field tacked on to it, ie
+    def svf_tranform(coords):
+        ....
+    svf_transform.velocity_field = velocity_field
+    so that it can be picked up here.
+    if phi is a composite transform, then it closes over its components.
+    """
+    
     if hasattr(phi, "velocity_field"):
         yield phi.velocity_field
     for cell in phi.__closure__:
