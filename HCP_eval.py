@@ -14,7 +14,7 @@ import multiscale_constr_model
 import utils
 
 parser = argparse.ArgumentParser()
-parser.add_argument("weights_path")
+parser.add_argument("weights_path" )
 parser.add_argument("--finetune", action=argparse.BooleanOptionalAction)
 parser.add_argument("--writeimages", action=argparse.BooleanOptionalAction)
 parser.add_argument("--network_name", default="multiscale_model")
@@ -32,12 +32,17 @@ def preprocess(image):
 
 
 input_shape = [1, 1, 130, 155, 130]
-net = getattr(multiscale_constr_model, args.network_name)(input_shape, 0.0001)
-multiscale_constr_model.multiscale_affine_model
+if args.network_name == "marc_reg":
+    import train_knee
+    net = train_knee.make_net(input_shape)
+else:
+    net = getattr(multiscale_constr_model, args.network_name)(input_shape, 0.0001)
 
-qq = torch.nn.Module()
-qq.module = net
-utils.log(qq.load_state_dict(torch.load(weights_path), strict=True))
+#multiscale_constr_model.multiscale_affine_model
+#
+#qq = torch.nn.Module()
+#qq.module = net
+utils.log(net.regis_net.load_state_dict(torch.load(weights_path), strict=True))
 net.eval()
 
 dices = []
