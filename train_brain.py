@@ -17,7 +17,7 @@ if __name__ == "__main__":
         train_knee.make_batch(dataset),
     )
 
-    loss = train_knee.make_net(input_shape=input_shape, lmbda=.5)
+    loss = train_knee.make_net(input_shape=input_shape)
 
     net_par = torch.nn.DataParallel(loss).cuda()
     optimizer = torch.optim.Adam(net_par.parameters(), lr=0.0001)
