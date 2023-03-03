@@ -62,21 +62,28 @@ def imgnorm(img):
     return norm
 #############################################################################
 
+class Batch():
+    def __init__(self, dataloader) -> None:
+        self.dataloader = dataloader
+        self.data_iter = iter(dataloader)
+    
+    def make_batch(self):
+        try:
+            data = next(self.data_iter)
+        except StopIteration:
+            self.data_iter = iter(self.dataloader)
+            data = next(self.data_iter) 
+        
+        return [d.cuda() for d in data]
+
 if __name__ == "__main__":
     input_shape = [1, 1, 160, 144, 192]
     footsteps.initialize()
 
     names = sorted(glob.glob('/playpen-ssd/lin.tian/data_local/oasis/OASIS_OAS1_*_MR1/aligned_norm.nii.gz'))[0:255]
     dataset = DataLoader(Dataset_epoch_crop(names, norm=True), batch_size=BATCH_SIZE*GPUs,
-                                         shuffle=True, num_workers=2)
+                                         shuffle=True, num_workers=2, drop_last=True)
 
-    def batch_function(dataset):
-        dataset_ite = iter(dataset)
-
-        def _ite():
-            data = next(dataset_ite)
-            return [d.cuda() for d in data]
-        return _ite
 
     loss = train_knee.make_net(input_shape=input_shape)
 
@@ -84,4 +91,4 @@ if __name__ == "__main__":
     optimizer = torch.optim.Adam(net_par.parameters(), lr=0.0001)
 
     net_par.train()
-    icon.train_batchfunction(net_par, optimizer, batch_function(dataset), unwrapped_net=loss)
+    icon.train_batchfunction(net_par, optimizer, Batch(dataset).make_batch, unwrapped_net=loss)
