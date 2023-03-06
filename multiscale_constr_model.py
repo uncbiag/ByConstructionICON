@@ -96,6 +96,102 @@ class ICONSquaringVelocityField(icon.RegistrationModule):
 
         return transform_AB, transform_BA
 
+class AntiDiagonalize(icon.RegistrationModule):
+    def __init__(self, net):
+        super().__init__()
+        self.net = net
+
+    def forward(self, image_A, image_B):
+        m = self.net(image_A, image_B)
+
+        dim = m.shape[1] - 1
+
+        dg = m[:, :dim, :dim]
+
+        dg = dg - torch.transpose(dg, 1, 2)
+
+        dg = torch.cat([dg, torch.zeros(dg.shape[0], 1, dim).to(dg.device)], axis=1)
+
+        dg = torch.cat([dg, m[:, :, dim:]], axis=2)
+
+        return dg
+
+from icon_registration.network_wrappers import multiply_matrix_vectorfield
+
+class FunctionFromMLPWeights(icon.RegistrationModule):
+  def __init__(self, net):
+    super().__init__()
+    self.net = net
+    self.hidden_size = 64
+
+  def forward(self, image_A, image_B):
+    batch_size = image_A.shape[0]
+    network_weights = self.net(image_A, image_B)
+    pointer = [0]
+    def take(num):
+      res = network_weights[:, pointer[0]:pointer[0] + num]
+      pointer[0] += num
+      return res
+    weight_A = take(2 * 64).reshape((batch_size, 64, 2))
+    bias_A = take(64)[:, :, None, None]
+
+    weight_B = take(64 * 64).reshape((batch_size, 64, 64))
+    bias_B = take(64)[:, :, None, None]
+
+    weight_C = take(64 * 2).reshape((batch_size, 2, 64))
+    bias_C = take(2)[:, :, None, None]
+
+
+    def warp(r):
+      feature = multiply_matrix_vectorfield(weight_A, r) + bias_A
+      #feature = feature * feature
+      feature = torch.nn.functional.gelu(feature)
+      feature = multiply_matrix_vectorfield(weight_B, feature) + bias_B
+      #feature = feature * feature
+      feature = torch.nn.functional.gelu(feature)
+      output = multiply_matrix_vectorfield(weight_C, feature) + bias_C
+      return output
+
+    return warp
+
+class IntegrateMLP(icon.RegistrationModule):
+  def __init__(self, net):
+    super().__init__()
+    self.net = net
+  
+  def forward(self, image_A, image_B):
+    w1 = self.net(image_A, image_B)
+    w2 = self.net(image_B, image_A)
+
+    v = lambda r: w1(r) - w2(r)
+
+    def warp(r):
+      h = 1 / 6
+      for i in range(6):
+        k1 = v(r)
+        k2 = v(r + h * k1 / 2)
+        k3 = v(r + h * k2 / 2)
+        k4 = v(r + h * k3)
+
+        r = r + h * 1/6 * (k1 + 2 * k2 + 2 * k3 + k4)
+      return r
+    v2 = lambda r: w2(r) - w1(r)
+
+    def warp2(r):
+      h = 1 / 6
+      for i in range(6):
+        k1 = v2(r)
+        k2 = v2(r + h * k1 / 2)
+        k3 = v2(r + h * k2 / 2)
+        k4 = v2(r + h * k3)
+
+        r = r + h * 1/6 * (k1 + 2 * k2 + 2 * k3 + k4)
+      return r
+    return warp, warp2
+
+
+
+
 
 class ConsistentFromMatrix(icon.RegistrationModule):
     """
@@ -325,7 +421,7 @@ def pretrained_affine_deformable_model(input_shape, lmbda):
 
 
 def evaluate(
-    net, prefix, epochs, lr=0.001, ds1=None, ds2=None, doshow=False, fileext=".png"
+        net, prefix, epochs, lr=0.001, ds1=None, ds2=None, doshow=False, fileext=".png", test_batch = None, step_callback = (lambda net: None)
 ):
     import footsteps
 
@@ -354,9 +450,13 @@ def evaluate(
         plt.imshow(torchvision.utils.make_grid(tensor[:12], nrow=4)[0].cpu().detach())
         plt.xticks([])
         plt.yticks([])
+    if test_batch:
+        image_A = test_batch[0].to(device)[:12]
+        image_B = test_batch[1].to(device)[:12]
+    else:
 
-    image_A = next(iter(ds1))[0].to(device)[:12]
-    image_B = next(iter(ds2))[0].to(device)[:12]
+        image_A = next(iter(ds1))[0].to(device)[:12]
+        image_B = next(iter(ds2))[0].to(device)[:12]
     with torch.no_grad():
         print(net(image_A, image_B))
         try:
