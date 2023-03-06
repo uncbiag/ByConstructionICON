@@ -86,8 +86,10 @@ with torch.no_grad():
 
             segmentation_A, segmentation_B = crop_center(load_4D(f_seg), *net_input_shape[2:]), torch.Tensor(crop_center(load_4D(m_seg), *net_input_shape[2:])).to(device)[None, None]
             net(A_trch, B_trch)
-            phi_AB_vectorfield = net.phi_AB_vectorfield
+            phi_AB = net.phi_AB
+            
             net(B_trch, A_trch)
+            phi_BA = net.phi_AB
             phi_BA_vectorfield = net.phi_AB_vectorfield
 
             warped_seg = compute_warped_image_multiNC(segmentation_B, phi_BA_vectorfield, net.spacing, spline_order=0, zero_boundary=0).cpu().numpy()[0,0]
@@ -104,11 +106,13 @@ with torch.no_grad():
             #     itk.imwrite(warped_segmentation_A, casedir+ "warpedseg.nii.gz")
             #     itk.transformwrite([phi_AB], casedir + "trans.hdf5")
 
-            violation = compute_warped_image_multiNC(phi_AB_vectorfield-net.identity_map, phi_BA_vectorfield, spacing=net.spacing, spline_order=1, zero_boundary=True) +\
-                phi_BA_vectorfield - net.identity_map
+            # violation = compute_warped_image_multiNC(phi_AB_vectorfield-net.identity_map, phi_BA_vectorfield, spacing=net.spacing, spline_order=1, zero_boundary=True) +\
+            #     phi_BA_vectorfield - net.identity_map
+
+            violation = phi_AB(phi_BA(net.identity_map)) - net.identity_map
             
             violation_total.append(
-                torch.mean(torch.sum((violation*disp_scale)**2, dim=1)).item()
+                torch.mean(torch.sqrt(torch.sum((violation*disp_scale)**2, dim=1))).item()
                 )
 
             utils.log(extract_id(f), extract_id(m))
