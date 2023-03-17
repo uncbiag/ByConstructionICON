@@ -20,4 +20,5 @@ def itk_mean_dice(im1, im2):
         
         d = 2 * np.sum(intersection) / (np.sum(m1) + np.sum(m2))
         dices.append(d)
+    log("DICE_breakdown:", dices)
     return np.mean(dices)

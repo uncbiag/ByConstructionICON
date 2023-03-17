@@ -46,6 +46,7 @@ net.eval()
 overall_1 = []
 overall_2 = []
 flips = []
+ICON_errors=[]
 
 for case in cases:
     image_insp = itk.imread(f"{image_root}/{case}/{case}_INSP_STD_COPD_img.nii.gz")
@@ -99,6 +100,13 @@ for case in cases:
     utils.log("flips:", loss.flips)
 
     flips.append(loss.flips)
+
+    scale = 175
+    zz = (net.phi_AB(net.phi_BA(net.identity_map)) - net.identity_map) * scale
+    icon_error = torch.mean(torch.sqrt(torch.sum(zz**2, axis=1))).item()
+    ICON_errors.append(icon_error)
+    utils.log("ICON_error", icon_error)
+utils.log("mean ICON error", np.mean(ICON_errors))
 
 
 utils.log("overall:")

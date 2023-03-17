@@ -47,6 +47,7 @@ net.eval()
 
 dices = []
 flips = []
+ICON_errors=[]
 
 import glob
 
@@ -58,6 +59,8 @@ for _ in range(100):
     image_A, image_B = (preprocess(get_brain_image(n)) for n in (n_A, n_B))
 
     # import pdb; pdb.set_trace()
+    import time
+    start = time.time()
     phi_AB, phi_BA, loss = itk_wrapper.register_pair(
         net,
         image_A,
@@ -65,6 +68,9 @@ for _ in range(100):
         finetune_steps=(50 if args.finetune == True else None),
         return_artifacts=True,
     )
+    end = time.time()
+
+    print("time", end - start)
 
     segmentation_A, segmentation_B = (get_sub_seg(n) for n in (n_A, n_B))
 
@@ -95,6 +101,12 @@ for _ in range(100):
 
     dices.append(mean_dice)
     flips.append(loss.flips)
+    scale=150
+    zz = (net.phi_AB(net.phi_BA(net.identity_map)) - net.identity_map) * scale
+    icon_error = torch.mean(torch.sqrt(torch.sum(zz**2, axis=1))).item()
+    ICON_errors.append(icon_error)
+    utils.log("ICON_error", icon_error)
+utils.log("mean ICON error", np.mean(ICON_errors))
 
 utils.log("Mean DICE")
 utils.log(np.mean(dices))

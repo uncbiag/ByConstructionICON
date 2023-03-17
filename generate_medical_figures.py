@@ -15,16 +15,30 @@ import icon_registration.itk_wrapper as itk_wrapper
 import utils
 import matplotlib.pyplot as plt
 
-def show(im):
-    plt.imshow(im, cmap="gray")
-    plt.xticks([])
-    plt.yticks([])
     
 def savefig(name):
     plt.savefig(name + ".png", bbox_inches="tight", pad_inches = 0)
     #plt.show()
     plt.clf()
 def render_pair(name, image_A, phi_AB, image_B, net):
+
+    aspect="equal"
+    
+    def show(im, **kwargs):
+        plt.imshow(im, cmap="gray", aspect=aspect)
+        plt.xticks([])
+        plt.yticks([])
+
+    composition = net.phi_BA(net.phi_AB_vectorfield)
+
+    if "HCP" in name:
+        show_old = show
+        def show_new(image):
+            show_old(image[::-1, ::-1])
+        show = show_new
+        net.phi_AB_vectorfield = 1-net.phi_AB_vectorfield.flip([2, 3, 4])
+        composition = 1 - composition.flip([2, 3, 4])
+
     
     name = footsteps.output_dir + name
     iinterpolator = itk.LinearInterpolateImageFunction.New(image_A)
@@ -43,12 +57,19 @@ def render_pair(name, image_A, phi_AB, image_B, net):
     plt.contour(net.phi_AB_vectorfield.detach().cpu()[0, 2, 50], levels=np.linspace(0, 1, 30))
     show(warped_image_A[100, ::2, ::2])
     savefig(name + viewname + "warped_image_A_grid")
+    plt.contour(composition.detach().cpu()[0, 1, 50], levels=np.linspace(0, 1, 30))
+    plt.contour(composition.detach().cpu()[0, 2, 50], levels=np.linspace(0, 1, 30))
+    show(warped_image_A[100, ::2, ::2] * 0)
+    savefig(name + viewname + "composition")
     
     show(warped_image_A[100])
     savefig(name + viewname + "warped_image_A")
 
     show(image_B[100])
     savefig(name + viewname + "image_B")
+
+    if "OAI" in name:
+        aspect = 2
 
     viewname = "Plane2"
     show(image_A[:, 100])
@@ -58,6 +79,10 @@ def render_pair(name, image_A, phi_AB, image_B, net):
     plt.contour(net.phi_AB_vectorfield.detach().cpu()[0, 2, :, 50], levels=np.linspace(0, 1, 30))
     show(warped_image_A[::2, 100, ::2])
     savefig(name + viewname + "warped_image_A_grid")
+    plt.contour(composition.detach().cpu()[0, 0, :, 50], levels=np.linspace(0, 1, 30))
+    plt.contour(composition.detach().cpu()[0, 2, :, 50], levels=np.linspace(0, 1, 30))
+    show(warped_image_A[::2, 100, ::2] * 0)
+    savefig(name + viewname + "composition")
 
     show(warped_image_A[:, 100])
     savefig(name + viewname + "warped_image_A")
@@ -75,6 +100,10 @@ def render_pair(name, image_A, phi_AB, image_B, net):
     show(warped_image_A[::2, ::2, 100])
     savefig(name + viewname + "warped_image_A_grid")
 
+    plt.contour(composition.detach().cpu()[0, 0, :, :, 50], levels=np.linspace(0, 1, 30))
+    plt.contour(composition.detach().cpu()[0, 1, :, :, 50], levels=np.linspace(0, 1, 30))
+    show(warped_image_A[::2, ::2, 100]*0)
+    savefig(name + viewname + "composition")
     show(warped_image_A[:, :, 100])
     savefig(name + viewname + "warped_image_A")
 

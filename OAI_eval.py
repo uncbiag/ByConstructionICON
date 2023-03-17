@@ -73,6 +73,7 @@ with open("../ICON/training_scripts/oai_paper_pipeline/splits/test/pair_path_lis
 
 dices = []
 flips = []
+ICON_errors=[]
 
 for test_pair_path in test_pair_paths:
     test_pair_path = test_pair_path.replace("playpen", "playpen-raid").split()
@@ -110,6 +111,12 @@ for test_pair_path in test_pair_paths:
     flips.append(loss.flips)
 
     dices.append(mean_dice)
+    scale=180
+    zz = (net.phi_AB(net.phi_BA(net.identity_map)) - net.identity_map) * scale
+    icon_error = torch.mean(torch.sqrt(torch.sum(zz**2, axis=1))).item()
+    ICON_errors.append(icon_error)
+    utils.log("ICON_error", icon_error)
+utils.log("mean ICON error", np.mean(ICON_errors))
 
 utils.log("Mean DICE")
 utils.log(np.mean(dices))

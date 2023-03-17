@@ -155,9 +155,11 @@ class FunctionFromMLPWeights(icon.RegistrationModule):
     return warp
 
 class IntegrateMLP(icon.RegistrationModule):
-  def __init__(self, net):
+  def __init__(self, net, steps=6
+):
     super().__init__()
     self.net = net
+    self.steps=steps
   
   def forward(self, image_A, image_B):
     w1 = self.net(image_A, image_B)
@@ -165,9 +167,10 @@ class IntegrateMLP(icon.RegistrationModule):
 
     v = lambda r: w1(r) - w2(r)
 
+    
     def warp(r):
-      h = 1 / 6
-      for i in range(6):
+      h = 1 / self.steps
+      for i in range(self.steps):
         k1 = v(r)
         k2 = v(r + h * k1 / 2)
         k3 = v(r + h * k2 / 2)
@@ -178,8 +181,8 @@ class IntegrateMLP(icon.RegistrationModule):
     v2 = lambda r: w2(r) - w1(r)
 
     def warp2(r):
-      h = 1 / 6
-      for i in range(6):
+      h = 1 / self.steps
+      for i in range(self.steps ):
         k1 = v2(r)
         k2 = v2(r + h * k1 / 2)
         k3 = v2(r + h * k2 / 2)
