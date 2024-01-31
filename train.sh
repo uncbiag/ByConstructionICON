@@ -2,4 +2,4 @@
 
 task=$1
 
-python ./train_vxmpp_supervised.py $task
+python ./train_constricon_supervised.py $task
