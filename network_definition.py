@@ -10,7 +10,7 @@ import multiscale_constr_model
 
 
 BATCH_SIZE = 2
-GPUS = 4
+GPUS = 1
 
 
 def make_batch(dataset):

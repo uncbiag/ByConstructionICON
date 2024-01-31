@@ -14,7 +14,7 @@ data_dir = 'data/'
 dir_save = 'model/'
 
 
-import train_knee
+import network_definition
 
 def main(args):
     
@@ -29,15 +29,20 @@ def main(args):
     logging.info('Loading model')
 
 
-
+    fixed_img = img_fixed_all[0]
     H,W,D = fixed_img.shape[-3:]
-    model = train_knee.make_net(input_shape=[1, 1, H, W, D])
+    model = network_definition.make_net(input_shape=[1, 1, H, W, D])
+    print(H, W, D)
+    
     model.train()
-    mode.cuda()
+    model.cuda()
     optimizer = torch.optim.Adam(model.parameters(),lr=0.0001)
 
     for repeat in range(2):
-        num_iterations = 4*4900
+        if repeat == 0:
+            num_iterations = 1*4900
+        else:
+            num_iterations = 7*4900
         t0 = time.time()
         run_tre = torch.empty(0,1); run_tre_test = torch.empty(0,1); 
         run_loss = torch.zeros(num_iterations)
@@ -51,6 +56,8 @@ def main(args):
                     
                     fixed_img = img_fixed_all[ii]
                     moving_img = img_moving_all[ii]
+
+                    print(fixed_img.shape)
                     H,W,D = fixed_img.shape[-3:]
 
 
@@ -69,9 +76,17 @@ def main(args):
                     else:
                         moving_img = moving_img.view(1,1,H,W,D).cuda()
 
+                print(torch.max(moving_img).item())
+
+                fixed_img = fixed_img - torch.min(fixed_img)
+                moving_img = moving_img - torch.min(moving_img)
+
+                moving_img = moving_img.float() / torch.max(moving_img)
+                fixed_img = fixed_img.float() / torch.max(fixed_img)
+
                 optimizer.zero_grad()
 
-                loss_object = net(fixed_img, moving_img)
+                loss_object = model(fixed_img, moving_img)
 
                 loss_object.all_loss.backward()
                 optimizer.step()
@@ -79,16 +94,16 @@ def main(args):
 
                 run_loss[i] = loss_object.all_loss.item()
 
-                str1 = f"iter: {i}, loss: {'%0.3f'%(run_loss[i-28:i-1].mean())}, runtime: {'%0.3f'%(time.time()-t0)} sec, GPU max/memory: {'%0.2f'%(torch.cuda.max_memory_allocated()*1e-9)} GByte"
+                str1 = f"iter: {i}, last_loss: {'%0.3f'%loss_object.all_loss.item()}, loss: {'%0.3f'%(run_loss[i-28:i-1].mean())}, runtime: {'%0.3f'%(time.time()-t0)} sec, GPU max/memory: {'%0.2f'%(torch.cuda.max_memory_allocated()*1e-9)} GByte"
                 pbar.set_description(str1)
                 pbar.update(1)
                 logging.info(str1)
                
         if(repeat==0):
-            torch.save([heatmap.state_dict(),unet_model.state_dict(),run_loss], dir_save + 'vxmpp_0.pth')
+            torch.save(model.state_dict(), dir_save + 'constricon_0.pth')
         else:
             logging.info('Saving model')
-            torch.save([heatmap.state_dict(),unet_model.state_dict(),run_loss], dir_save + 'vxmpp.pth')        
+            torch.save(model.state_dict(), dir_save + 'constricon.pth')        
 
 
 if __name__ == "__main__":

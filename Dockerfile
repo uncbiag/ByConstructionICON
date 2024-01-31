@@ -13,8 +13,10 @@ RUN pip3 install -r requirements.txt
 COPY utils ./utils
 COPY test.sh .
 COPY train.sh .
-COPY inference_vxmpp.py .
-COPY train_vxmpp_supervised.py .
+COPY inference_constricon.py .
+COPY train_constricon_supervised.py .
+COPY multiscale_constr_model.py .
+COPY network_definition.py .
 
 RUN chmod +x test.sh
 RUN chmod +x train.sh

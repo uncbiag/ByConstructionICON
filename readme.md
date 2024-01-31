@@ -1,58 +1,60 @@
-# VoxelMorph++ with ThoraxCBCT
+# ConstrICON with ThoraxCBCT
 
-Example submission for the OncoReg Type 3 Challenge using VoxelMorph++ (Voxelmorph with keypoint supervision and multi-channel instance optimisation) with data from the ThoraxCBCT Type 2 Challenge Task.  
-Participants may use this as a template for the containerisation of their submissions. 
-To submit to the challenge every solution must be packaged as a Docker container including training and inference in case of a DL solution or any required scripts to output displacementfields with a classical solution.
+A dockerization of "Inverse Consistency By Construction for Multistep Deep Registration" (MICCAI 2023) for the OncoReg challenge. In the original paper we train our model using the same configuration on four datasets. This docker container trains that model on the provided dataset.json using that configuration.
 
-Make sure to include a requirements.txt file and preferably base your solution on torch 2.1.2+cu121 as this is tested on our setup.
-For easy containerisation you may use the Dockerfile provided as this is guarenteed to work with our infrastructure. Make sure to include all files requiring copying in the Dockerfile.
+training loss should start near 2, rapidly drop below 1, and then slowly decrease.
 
-Please include logging in you submission, as can be seen in this example. 
+With the settings provided in this repo, training should take about 8 hours, with an early checkpoint produced at the 45 minute mark. If 8 hours is too long, please adjust 
+```
+num_iterations = 7*4900
+```
+in `ByConstructionICON/train_constricon_supervised.py` at line 43. If more than 8 hours is available, the value 7 can be increased to use this time. From our experiments we expect mtre performance to continue improving up to 2 days of training, although train loss will plateau earlier. (`num_iterations = 24 * 2 * 4900`).
 
-It is advised to copy our train.sh / test.sh structure and you may also look at our data loading process as it is easy adaptable from ThoraxCBCT to OncoReg.
+Our inference script performs 50 steps of instance optimization. This should take a few minutes per image pair.
 
 ## How To
 
-Download our ThoraxCBCT dataset including training and validation data, keypoints, masks and the **ThoraxCBCT_dataset.json**:  
+Download the ThoraxCBCT dataset including training and validation data, keypoints, masks and the **ThoraxCBCT_dataset.json**:  
 https://cloud.imi.uni-luebeck.de/s/xQPEy4sDDnHsmNg
 
 Build the docker:
 
 ```
-docker build -t vxmpp /PATH_TO/OncoReg/examples/VoxelMorph++/
+sudo docker build -t constricon ByConstructionICON/
 ```
 
 Run docker and start training (insert path to ThoraxCBCT data):
 
 ```
-docker run --gpus all --entrypoint ./train.sh
--v /PATH_TO_DATA_DIR/:/oncoreg/data
--v ./model/:/oncoreg/model/
-vxmpp ThoraxCBCT
+sudo docker run --gpus all --entrypoint ./train.sh \
+-v /playpen/tgreer/docker_shit/Release_06_12_23/:/oncoreg/data \
+-v ./model/:/oncoreg/model/ \
+constricon ThoraxCBCT 
 ```
 
 Run inference (insert path to ThoraxCBCT data):
 
 ```
-docker run --gpus all --entrypoint ./test.sh
--v /PATH_TO_DATA_DIR/:/oncoreg/data
--v ./model/:/oncoreg/model/
--v ./results/:/oncoreg/results/
-vxmpp ThoraxCBCT Val
+sudo docker run --gpus all --entrypoint ./test.sh \
+-v /playpen/tgreer/docker_shit/Release_06_12_23/:/oncoreg/data \
+-v ./model/:/oncoreg/model/ \
+-v ./results/:/oncoreg/results/ \
+constricon ThoraxCBCT Val
 ```
 
 ## Usage without Docker
 
-If you want to use our example without docker containerisation you can do so by creating an environment directly via the requirements.txt and then run the training and inference scripts after adjusting the paths at the beginning of the scripts:
+If you want to use this repository without docker containerisation you can do so by creating an environment directly via the requirements.txt and then run the training and inference scripts after adjusting the paths at the beginning of the scripts:
 ```
-python train_vxmpp_supervised.py <task>
-python inference_vxmpp.py <task> <Val/Ts>
+python train_constricon_supervised.py <task>
+python inference_constricon.py <task> <Val/Ts>
 ```
 
 
 
 
 ### References
-Heinrich, Mattias P., and Lasse Hansen. "Voxelmorph++ going beyond the cranial vault with keypoint supervision and multi-channel instance optimisation." International Workshop on Biomedical Image Registration. Cham: Springer International Publishing, 2022. https://link.springer.com/chapter/10.1007/978-3-031-11203-4_10  
 
-For more information on VoxelMorph++ see https://github.com/mattiaspaul/VoxelMorphPlusPlus.
+Inverse Consistency by Construction for Multistep Deep Registration
+Hastings Greer, Lin Tian, Francois-Xavier Vialard, Roland Kwitt, Sylvain Bouix, Raul San Jose Estepar, Richard Rushmore, Marc Niethammer 
+MICCAI 2023
