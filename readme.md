@@ -1,5 +1,7 @@
 # ConstrICON with ThoraxCBCT
 
+https://github.com/uncbiag/ByConstructionICON/tree/oncoreg
+
 A dockerization of "Inverse Consistency By Construction for Multistep Deep Registration" (MICCAI 2023) for the OncoReg challenge. In the original paper we train our model using the same configuration on four datasets. This docker container trains that model on the provided dataset.json using that configuration.
 
 training loss should start near 2, rapidly drop below 1, and then slowly decrease.
@@ -10,7 +12,7 @@ num_iterations = 7*4900
 ```
 in `ByConstructionICON/train_constricon_supervised.py` at line 43. If more than 8 hours is available, the value 7 can be increased to use this time. From our experiments we expect mtre performance to continue improving up to 2 days of training, although train loss will plateau earlier. (`num_iterations = 24 * 2 * 4900`).
 
-Our inference script performs 50 steps of instance optimization. This should take a few minutes per image pair.
+Our inference script performs 50 steps of instance optimization. This should take under a minute per image pair.
 
 ## How To
 
@@ -27,7 +29,7 @@ Run docker and start training (insert path to ThoraxCBCT data):
 
 ```
 sudo docker run --gpus all --entrypoint ./train.sh \
--v /playpen/tgreer/docker_shit/Release_06_12_23/:/oncoreg/data \
+-v /playpen/tgreer/docker/Release_06_12_23/:/oncoreg/data \
 -v ./model/:/oncoreg/model/ \
 constricon ThoraxCBCT 
 ```
@@ -36,7 +38,7 @@ Run inference (insert path to ThoraxCBCT data):
 
 ```
 sudo docker run --gpus all --entrypoint ./test.sh \
--v /playpen/tgreer/docker_shit/Release_06_12_23/:/oncoreg/data \
+-v /playpen/tgreer/docker/Release_06_12_23/:/oncoreg/data \
 -v ./model/:/oncoreg/model/ \
 -v ./results/:/oncoreg/results/ \
 constricon ThoraxCBCT Val
