@@ -1,0 +1,8 @@
+--find-links https://download.pytorch.org/whl/torch_stable.html
+torch==2.1.2+cu121
+torchvision
+nibabel
+tqdm
+scipy
+numpy
+icon_registration
