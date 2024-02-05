@@ -5,12 +5,47 @@ import footsteps
 import icon_registration as icon
 import icon_registration.networks as networks
 import torch
+import torch.nn.functional as F
 
 import multiscale_constr_model
 
 
 BATCH_SIZE = 2
 GPUS = 1
+
+def augment(image_A, image_B):
+    identity_list = []
+    for i in range(image_A.shape[0]):
+        identity = torch.Tensor([[[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]])
+        idxs = set((0, 1, 2))
+        for j in range(3):
+            k = random.choice(list(idxs))
+            idxs.remove(k)
+            identity[0, j, k] = 1
+        identity = identity * (torch.randint_like(identity, 0, 2) * 2 - 1)
+        identity_list.append(identity)
+
+    identity = torch.cat(identity_list)
+
+    noise = torch.randn((image_A.shape[0], 3, 4))
+
+    forward = identity + 0.05 * noise
+
+    grid_shape = list(image_A.shape)
+    grid_shape[1] = 3
+    forward_grid = F.affine_grid(forward.cuda(), grid_shape)
+
+    warped_A = F.grid_sample(image_A, forward_grid, padding_mode="border")
+
+    noise = torch.randn((image_A.shape[0], 3, 4))
+    forward = identity + 0.05 * noise
+
+    grid_shape = list(image_A.shape)
+    grid_shape[1] = 3
+    forward_grid = F.affine_grid(forward.cuda(), grid_shape)
+    warped_B = F.grid_sample(image_B, forward_grid, padding_mode="border")
+
+    return warped_A, warped_B
 
 
 def make_batch(dataset):

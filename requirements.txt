@@ -5,4 +5,4 @@ nibabel
 tqdm
 scipy
 numpy
-icon_registration
+icon_registration==1.1.3

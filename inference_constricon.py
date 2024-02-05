@@ -16,8 +16,11 @@ from utils.data_utils import get_files
 import network_definition
 
 data_dir = 'data/'
-model_weights_path = 'model/constricon.pth'
+model_weights_path = 'model/constricon_0.pth'
 outfolder = 'results/'
+
+def logstring(*args):
+    logging.info(str(args))
 
 def main(args):
     
@@ -31,7 +34,7 @@ def main(args):
 
     fixed_img = img_fixed_all[0]
     H,W,D = fixed_img.shape[-3:]
-    print(H, W, D)
+    logstring(H, W, D)
     model = network_definition.make_net(input_shape=[1, 1, H, W, D])
 
     logging.info('Loading model')
@@ -51,7 +54,7 @@ def main(args):
 
 
         H,W,D = orig_shapes_all[case]
-        print(H, W, D)
+        logstring(H, W, D)
 
         state_dict = torch.load(model_weights_path)
         model.load_state_dict(state_dict)
@@ -61,6 +64,7 @@ def main(args):
 
         moving_img = moving_img.float() / torch.max(moving_img)
         fixed_img = fixed_img.float() / torch.max(fixed_img)
+
         model.train()
         model.cuda()
         optimizer = torch.optim.Adam(model.parameters(), lr=0.00002)
@@ -69,7 +73,7 @@ def main(args):
             loss_tuple = model(moving_img, fixed_img )
             loss_tuple.all_loss.backward()
             optimizer.step()
-            print(loss_tuple.all_loss.item())
+            logstring(loss_tuple.all_loss.item())
         dense_flow = (model.phi_AB_vectorfield - model.identity_map)
         dense_flow = F.interpolate(dense_flow,scale_factor=2,mode='trilinear')
         dense_flow = dense_flow.permute(0, 2, 3, 4, 1)[:, :, :, :, [2, 1, 0]].detach().cpu() * 2.
@@ -87,7 +91,7 @@ def main(args):
             aff_mov = aff_mov_all[i]
 
             dense_flow = dense_flows[i]
-            print(img_mov.shape, dense_flow.shape, H, W, D)
+            logstring(img_mov.shape, dense_flow.shape, H, W, D)
 
             warped_img = F.grid_sample(img_mov.view(1,1,H,W,D),dense_flow.cpu()+F.affine_grid(torch.eye(3,4).unsqueeze(0),(1,1,H,W,D))).squeeze()
             warped = nib.Nifti1Image(warped_img.numpy(), aff_mov)  

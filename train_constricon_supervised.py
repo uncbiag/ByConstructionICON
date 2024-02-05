@@ -50,39 +50,32 @@ def main(args):
         with tqdm(total=num_iterations, file=sys.stdout) as pbar:
 
             for i in range(num_iterations):
+                fixed_imgs = []
+                moving_imgs =[]
 
-                with torch.no_grad():
+                for _ in range(2): # BATCH SIZE
                     ii = torch.randperm(len(img_fixed_all))[0]
                     
                     fixed_img = img_fixed_all[ii]
                     moving_img = img_moving_all[ii]
 
-                    print(fixed_img.shape)
-                    H,W,D = fixed_img.shape[-3:]
+                    fixed_img = fixed_img.view(1,1,H,W,D).cuda()
+                    moving_img = moving_img.view(1,1,H,W,D).cuda()
 
+                    fixed_imgs.append(fixed_img)
+                    moving_imgs.append(moving_img)
 
-                    #Affine augmentation of images *and* keypoints 
-                    if(i%2==0):
-                        A = (torch.randn(3,4)*.035+torch.eye(3,4)).cuda()
-                        affine = F.affine_grid(A.unsqueeze(0),(1,1,H,W,D))
-                        fixed_img = F.grid_sample(fixed_img.view(1,1,H,W,D).cuda(),affine)
-                    else:
-                        fixed_img = fixed_img.view(1,1,H,W,D).cuda()
+                fixed_img = torch.cat(fixed_imgs, dim=0)
+                moving_img = torch.cat(moving_imgs, dim=0)
 
-                    if(i%2==1):
-                        A = (torch.randn(3,4)*.035+torch.eye(3,4)).cuda()
-                        affine = F.affine_grid(A.unsqueeze(0),(1,1,H,W,D))
-                        moving_img = F.grid_sample(moving_img.view(1,1,H,W,D).cuda(),affine)
-                    else:
-                        moving_img = moving_img.view(1,1,H,W,D).cuda()
-
-                print(torch.max(moving_img).item())
 
                 fixed_img = fixed_img - torch.min(fixed_img)
                 moving_img = moving_img - torch.min(moving_img)
 
                 moving_img = moving_img.float() / torch.max(moving_img)
                 fixed_img = fixed_img.float() / torch.max(fixed_img)
+
+                moving_img, fixed_img = network_definition.augment(moving_img, fixed_img)
 
                 optimizer.zero_grad()
 
